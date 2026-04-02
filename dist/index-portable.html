@@ -1,0 +1,1046 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Idle Fish Tank</title>
+  <style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(180deg, #a0e9ff 0%, #00b872 45%, #144a6b 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.container {
+  width: min(1100px, 95%);
+  max-width: 1100px;
+  margin: 30px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.container h1 {
+  align-self: center;
+  margin: 0;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  max-width: 1000px;
+  height: auto;
+  margin: 0 auto;
+  border: 8px solid #534003;
+  background-color: #ff2727;
+}
+
+.controls {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.control-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+button,
+select {
+  font-size: 1rem;
+  padding: 8px 12px;
+  border-radius: 5px;
+  border: 1px solid #222;
+}
+
+p#fishInfo {
+  margin-top: 0;
+  margin-bottom: 4px;
+  color: #333;
+}
+
+
+  </style>
+</head>
+<body>
+<main class="container">
+    <h1>Idle Fish Tank</h1>
+
+    <canvas id="fishCanvas" width="1000" height="500" aria-label="Fish tank canvas"></canvas>
+
+    <section class="controls" aria-label="Fish controls">
+      <div class="control-row">
+        <label for="fishTypeSelect">Fish Type</label>
+        <select id="fishTypeSelect">
+          <option value="normal">Normal (Purple / Light Blue / Yellow)</option>
+          <option value="shy">Shy (Orange)</option>
+          <option value="bold">Bold (Red)</option>
+          <option value="lazy">Lazy (Indigo)</option>
+          <option value="hyper">Hyper (Yellow)</option>
+          <option value="pair">Pair (Pink / Cyan)</option>
+          <option value="big">Big (Green)</option>
+        </select>
+      </div>
+
+      <div class="control-row">
+        <button id="addFishBtn">Add Fish</button>
+        <button id="removeFishBtn">Remove Fish</button>
+        <button id="resetFishBtn">Reset Fish</button>
+        <button id="fullscreenBtn">Fullscreen</button>
+      </div>
+    </section>
+
+    <p id="fishInfo">Click add/remove to control fish. Click canvas to nudge nearby fish.</p>
+  </main>
+
+  <script>
+// background.js content
+// background.js
+
+class BackgroundRenderer {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext("2d");
+
+        this.waterGradient = this.#createWaterGradient();
+
+        // Structure storage
+        this.backStructures = [];
+        this.frontStructures = [];
+
+        // Centerpiece options
+        this.centerpieceOptions = ["driftwood", "treasure", "bigRock"];
+
+        // Build scenery once
+        this.#generateScenery();
+    }
+
+    // -----------------------------
+    // PRIVATE: Create water gradient
+    // -----------------------------
+    #createWaterGradient() {
+        const g = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+        g.addColorStop(0, "#7ecfff");
+        g.addColorStop(1, "#004f7a");
+        return g;
+    }
+
+    // -----------------------------
+    // PRIVATE: Create a structure
+    // -----------------------------
+    #createStructure(x, y, type) {
+        const s = { x, y, type };
+
+        if (type === "sand") {
+            const palette = ["#e5d6a7", "#d9c28f", "#e1cea8", "#e6d6c5", "#d3cab5"];
+            const base = palette[Math.floor(Math.random() * palette.length)];
+            const shift = Math.floor(Math.random() * 41) - 20;
+            s.color = this.#adjustBrightness(base, shift);
+            s.size = 20 + Math.random() * 40;
+        }
+
+        if (type === "rock") {
+            s.size = 20 + Math.random() * 20;
+        }
+
+        if (type === "grass") {
+            s.height = 40 + Math.random() * 80;
+            s.blades = 7 + Math.floor(Math.random() * 4);
+            s.spread = 20 + Math.random() * 40;
+            s.swayOffset = Math.random() * 1000;
+
+            s.bladeData = [];
+            for (let i = 0; i < s.blades; i++) {
+                s.bladeData.push({
+                    heightFactor: 0.7 + Math.random() * 0.6,
+                    curveFactor: 0.5 + Math.random() * 0.5,
+                    width: 1.5 + Math.random() * 2.5,
+                    offset: (Math.random() - 0.5) * s.spread
+                });
+            }
+        }
+
+        if (type === "driftwood") {
+            s.height = 80 + Math.random() * 40;
+            s.width = 20 + Math.random() * 10;
+            s.lean = (Math.random() - 0.5) * 20;
+            s.tipOffset = (Math.random() - 0.5) * 15;
+        }
+
+        if (type === "bigRock") {
+            s.height = 15 + Math.random() * 25;
+            s.width = 20 + Math.random() * 20;
+            s.tilt = (Math.random() - 0.5) * 10;
+            s.scale = 3 + Math.random() * 4;
+        }
+
+        if (type === "treasure") {
+            s.tilt = (Math.random() - 0.5) * 0.25;
+            s.scale = 2.5 + Math.random() * 0.5;
+        }
+
+        return s;
+    }
+
+    // -----------------------------
+    // PRIVATE: Generate scenery
+    // -----------------------------
+    #generateScenery() {
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+
+        // Centerpiece
+        const chosen = this.centerpieceOptions[
+            Math.floor(Math.random() * this.centerpieceOptions.length)
+        ];
+
+        const centerpiece = this.#createStructure(
+            w / 2 + (Math.random() * 200 - 100),
+            h,
+            chosen
+        );
+
+        this.backStructures.push(centerpiece);
+
+        // Back layer
+        for (let i = 0; i < 50; i++) {
+            const x = Math.random() * w;
+            const y = h;
+            const r = Math.random();
+
+            if (r < 0.50) this.backStructures.push(this.#createStructure(x, y, "sand"));
+            else if (r < 0.80) this.backStructures.push(this.#createStructure(x, y, "grass"));
+            else this.backStructures.push(this.#createStructure(x, y, "rock"));
+        }
+
+        // Front layer
+        for (let i = 0; i < 40; i++) {
+            const x = Math.random() * w;
+            const y = h;
+            const r = Math.random();
+
+            if (r < 0.75) this.frontStructures.push(this.#createStructure(x, y, "grass"));
+            else if (r < 0.90) this.frontStructures.push(this.#createStructure(x, y, "sand"));
+            else this.frontStructures.push(this.#createStructure(x, y, "rock"));
+        }
+    }
+
+    // -----------------------------
+    // PRIVATE: Draw a structure
+    // -----------------------------
+    #drawStructure(s) {
+        const ctx = this.ctx;
+        ctx.save();
+
+        if (s.type === "sand") {
+            ctx.fillStyle = s.color;
+            ctx.beginPath();
+            ctx.ellipse(s.x, s.y, s.size * 2, s.size, 0, 0, Math.PI, true);
+            ctx.fill();
+        }
+
+        if (s.type === "rock") {
+            ctx.fillStyle = "#6e6e6e";
+            ctx.beginPath();
+            ctx.ellipse(s.x, s.y, s.size, s.size * 0.7, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        if (s.type === "grass") {
+            ctx.strokeStyle = "#2e8b57";
+            const sway = Math.sin(Date.now() * 0.0006 + s.swayOffset) * 6;
+
+            for (const b of s.bladeData) {
+                const bladeX = s.x + b.offset;
+                const bladeHeight = s.height * b.heightFactor;
+                const bladeCurve = sway * b.curveFactor;
+
+                ctx.lineWidth = b.width;
+                ctx.beginPath();
+                ctx.moveTo(bladeX, s.y);
+                ctx.quadraticCurveTo(
+                    bladeX + bladeCurve,
+                    s.y - bladeHeight * 0.5,
+                    bladeX,
+                    s.y - bladeHeight
+                );
+                ctx.stroke();
+            }
+        }
+
+        if (s.type === "driftwood") {
+            ctx.translate(s.x, s.y);
+            ctx.fillStyle = "#5a3e2b";
+            ctx.beginPath();
+            ctx.moveTo(-s.width / 2, 0);
+            ctx.lineTo(-s.width / 3 + s.lean, -s.height * 3);
+            ctx.lineTo(s.tipOffset, -s.height * 3.2);
+            ctx.lineTo(s.width / 3 + s.lean, -s.height * 2.6);
+            ctx.lineTo(s.width / 2, 0);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        if (s.type === "treasure") {
+            ctx.translate(s.x, s.y);
+            ctx.rotate(s.tilt);
+            ctx.scale(s.scale, s.scale);
+
+            ctx.fillStyle = "#7a4a1e";
+            ctx.fillRect(-20, -20, 40, 20);
+
+            ctx.fillStyle = "#545454";
+            ctx.fillRect(-20, -15, 40, 4);
+            ctx.fillRect(-20, -5, 40, 4);
+
+            ctx.fillStyle = "#523417";
+            ctx.beginPath();
+            ctx.moveTo(-20, -20);
+            ctx.quadraticCurveTo(0, -45, 20, -20);
+            ctx.lineTo(20, -25);
+            ctx.quadraticCurveTo(0, -50, -20, -25);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = "gold";
+            ctx.beginPath();
+            ctx.arc(0, -22, 6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        if (s.type === "bigRock") {
+            ctx.translate(s.x, s.y);
+            ctx.scale(s.scale, s.scale);
+            ctx.fillStyle = "#444444";
+            ctx.beginPath();
+            ctx.moveTo(-s.width / 2, 0);
+            ctx.lineTo(s.tilt, -s.height);
+            ctx.lineTo(s.width / 2, 0);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+
+    // -----------------------------
+    // PRIVATE: Brightness adjust
+    // -----------------------------
+    #adjustBrightness(hex, amount) {
+        const num = parseInt(hex.slice(1), 16);
+        let r = (num >> 16) + amount;
+        let g = ((num >> 8) & 0xff) + amount;
+        let b = (num & 0xff) + amount;
+
+        r = Math.min(255, Math.max(0, r));
+        g = Math.min(255, Math.max(0, g));
+        b = Math.min(255, Math.max(0, b));
+
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+
+    // -----------------------------
+// PUBLIC: Draw background
+// -----------------------------
+    drawBackground() {
+        this.ctx.fillStyle = this.waterGradient;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    drawSand() {
+        const h = this.canvas.height;
+        this.ctx.fillStyle = "#d9c27a";
+        this.ctx.fillRect(0, h - 40, this.canvas.width, 80);
+    }
+    // -----------------------------
+    // PUBLIC: Draw everything
+    // -----------------------------
+    draw() {
+        this.drawBackground();
+
+        // Back layer
+        this.backStructures.forEach(s => this.#drawStructure(s));
+
+        this.drawSand();
+
+        // Fish drawn in idle-fish.js
+
+        // Front layer
+        this.frontStructures.forEach(s => this.#drawStructure(s));
+    }
+}
+
+export default BackgroundRenderer;
+  </script>
+
+  <script>
+// idle-fish.js content
+import BackgroundRenderer from "./background.js";
+
+const canvas = document.getElementById("fishCanvas");
+const ctx = canvas.getContext("2d");
+const background = new BackgroundRenderer(canvas);
+
+function animate() {
+    // Draw background + back plants + sand + front plants
+    background.draw();
+
+    // Update and draw fish
+    fishList.forEach(f => {
+        updateFish(f);
+        drawFish(f);
+    });
+
+    requestAnimationFrame(animate);
+}
+
+const fishList = [];
+const schoolColors = {}; // schoolId â†’ brightness offset
+
+const zones = { // 0.0 is 0%, etc.
+top:    [0.00, 0.15], 
+high:   [0.15, 0.35], 
+middle: [0.35, 0.50],  
+low:    [0.50, 0.70], 
+bottom: [0.90, 1.00]
+}
+
+// ----------------------------------------------------
+// FISH PERSONALITY DEFINITIONS
+// ----------------------------------------------------
+const fishTypes = {
+normal: {
+colors: ["#5f27cd", "#feca57", "#48dbfb"],
+speedRange: [1, 3],
+wiggleRange: [10, 20],
+turnBufferRange: [30, 140],
+zones: ["high", "middle"]
+},
+shy: {
+colors: ["#ff7b00"],
+speedRange: [0.5, 1.2],
+wiggleRange: [5, 12],
+turnBufferRange: [10, 40],
+lowY: true,
+pauses: true,
+zones: ["low", "bottom"]
+},
+bold: {
+colors: ["#ff6b6b"],
+speedRange: [2, 4],
+wiggleRange: [20, 35],
+turnBufferRange: [60, 160],
+zones: ["top", "high", "middle"]
+},
+lazy: {
+colors: ["#1e00a1"],
+speedRange: [0.4, 1],
+wiggleRange: [25, 40],
+turnBufferRange: [80, 200],
+zones: ["middle", "low"]
+},
+hyper: {
+colors: ["#fffb00"],
+speedRange: [3, 6],
+wiggleRange: [5, 15],
+turnBufferRange: [5, 20],
+erratic: true,
+zones: ["top", "high","middle","low"]
+},
+pair: {
+colors: ["#ff9ff3", "#00d2d3"],
+speedRange: [1, 2],
+wiggleRange: [10, 20],
+turnBufferRange: [20, 60],
+small: true,
+group: true,
+zones: ["low", "middle", "high"]
+},
+big: {
+colors: ["#10ac84"],
+speedRange: [0.5, 1.2],
+wiggleRange: [5, 10],
+turnBufferRange: [100, 200],
+big: true,
+zones: ["low", "high"]
+}
+};
+
+// ----------------------------------------------------
+// HELPER FUNCTIONS
+// ----------------------------------------------------
+function pick(arr) {
+return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function randRange([min, max]) {
+return min + Math.random() * (max - min);
+}
+
+function adjustHexBrightness(hex, amount) {
+    const num = parseInt(hex.slice(1), 16);
+    let r = (num >> 16) + amount;
+    let g = ((num >> 8) & 0xff) + amount;
+    let b = (num & 0xff) + amount;
+
+    r = Math.min(255, Math.max(0, r));
+    g = Math.min(255, Math.max(0, g));
+    b = Math.min(255, Math.max(0, b));
+
+    return `rgb(${r}, ${g}, ${b})`;
+}
+
+// ----------------------------------------------------
+// CREATE FISH
+// ----------------------------------------------------
+function createFish(type = "normal", x, y) {
+    const t = fishTypes[type];
+
+    const speed = randRange(t.speedRange);
+    const wiggle = randRange(t.wiggleRange);
+    const turnBuffer = randRange(t.turnBufferRange);
+
+    const startX = x ?? Math.random() * canvas.width;
+    const startY = y ?? canvas.height / 2;
+
+    // Create fish object FIRST
+    const fish = {
+        type,
+        x: startX,
+        y: startY,
+
+        vx: 0,
+        vy: 0,
+        ax: 0,
+        ay: 0,
+
+        baseY: startY,
+
+        speed,
+        wiggleStrength: wiggle,
+        turnBuffer,
+
+        overrideY: null,
+        shyAvoiding: false,
+
+        direction: Math.random() < 0.5 ? -1 : 1,
+        color: pick(t.colors),
+
+        lowY: t.lowY || false,
+        pauses: t.pauses || false,
+        erratic: t.erratic || false,
+        small: t.small || false,
+        big: t.big || false,
+        group: t.group || false,
+
+        // Pairâ€‘fish school properties
+        schoolId: null,
+        brightnessOffset: 0
+    };
+
+    // ----------------------------------------------------
+    // APPLY ZONE-BASED SPAWNING
+    // ----------------------------------------------------
+    const allowedZones = t.zones;
+    const chosenZone = pick(allowedZones);
+    const [zMin, zMax] = zones[chosenZone];
+
+    const zoneY = canvas.height * (zMin + Math.random() * (zMax - zMin));
+
+    fish.baseY = zoneY;
+    fish.y = zoneY;
+
+    return fish;
+}
+
+// ----------------------------------------------------
+// ADD / REMOVE / RESET / FULLSCREEN FISH BUTTONS
+// ----------------------------------------------------
+document.getElementById("addFishBtn").addEventListener("click", () => {
+const type = document.getElementById("fishTypeSelect").value;
+fishList.push(createFish(type));
+});
+
+document.getElementById("removeFishBtn").addEventListener("click", () => {
+if (fishList.length > 0) fishList.pop();
+});
+
+document.getElementById("resetFishBtn").addEventListener("click", () => {
+    fishList.length = 0;
+    spawnInitialFish();   // <-- this now handles EVERYTHING
+});
+
+document.getElementById("fullscreenBtn").addEventListener("click", () => {
+if (canvas.requestFullscreen) {
+canvas.requestFullscreen();
+} else if (canvas.webkitRequestFullscreen) {
+canvas.webkitRequestFullscreen();
+}
+});
+
+// ----------------------------------------------------
+// INITIAL FISH SPAWN â€” wrapped into a function
+// ----------------------------------------------------
+function spawnInitialFish() {
+
+    const allTypes = Object.keys(fishTypes);
+
+    // 1. Spawn at least one of each type
+    allTypes.forEach(type => {
+        const x = Math.random() * canvas.width;
+        const y = 80 + Math.random() * (canvas.height - 160);
+        fishList.push(createFish(type, x, y));
+    });
+
+    // 2. Guaranteed pair group spawn
+    const pairCount = 6;
+    const centerX = Math.random() * canvas.width;
+
+    for (let i = 0; i < pairCount; i++) {
+        fishList.push(createFish("pair"));
+    }
+
+    // 3. Random extras
+    const extraCount = Math.floor(Math.random() * 5);
+    for (let i = 0; i < extraCount; i++) {
+        const type = pick(allTypes);
+        fishList.push(createFish(type));
+    }
+
+    // ----------------------------------------------------
+    // FORCE PAIR FISH INTO A VISIBLE GROUP
+    // ----------------------------------------------------
+    const pairFish = fishList.filter(f => f.type === "pair");
+
+if (pairFish.length > 0) {
+    // --- vertical band with more variation (we'll tweak this in section 2) ---
+    const sharedY = pairFish[0].y;
+
+    pairFish.forEach(f => {
+        const dy = (Math.random() - 0.5) * 80;   // more Y variation
+        f.y = sharedY + dy;
+        f.baseY = sharedY + dy;
+    });
+
+    // --- horizontal clustering stays as you like ---
+    const clusterX = Math.random() * canvas.width;
+    pairFish.forEach(f => {
+        f.x = clusterX + (Math.random() - 0.5) * 80;
+    });
+
+    // --- COLOR GROUPING: give this group a shared brightness offset ---
+    const schoolId = Date.now(); // simple unique id per spawn
+    const brightness = (Math.random() - 1) * 80; // -20 to +20
+
+    schoolColors[schoolId] = brightness;
+
+    pairFish.forEach(f => {
+        f.schoolId = schoolId;
+        f.brightnessOffset = brightness;
+    });
+}
+
+    // Debug
+    console.log("Pair fish:", pairFish.length);
+}
+spawnInitialFish(); // Call the function to spawn fish on page load
+
+
+// -----------------------------------------
+// ENSURE AT LEAST N PAIR FISH EXIST
+// -----------------------------------------
+const MIN_PAIR = 6;
+
+let currentPairs = fishList.filter(f => f.type === "pair").length;
+while (currentPairs < MIN_PAIR) {
+    fishList.push(createFish("pair"));
+    currentPairs++;
+}
+
+function adjustBrightness(hex, factor) {
+const num = parseInt(hex.slice(1), 16);
+let r = (num >> 16) + factor;
+let g = ((num >> 8) & 0xFF) + factor;
+let b = (num & 0xFF) + factor;
+
+r = Math.min(255, Math.max(0, r));
+g = Math.min(255, Math.max(0, g));
+b = Math.min(255, Math.max(0, b));
+
+return `rgb(${r}, ${g}, ${b})`;
+}
+
+// ----------------------------------------------------
+// DRAW FISH
+// ----------------------------------------------------
+function drawFish(f) {
+ctx.save();
+
+// Size scaling based on personality
+let scale = 1;
+if (f.small) scale = 0.6;
+if (f.big) scale = 1.6;
+
+ctx.translate(f.x, f.y);
+if (f.direction === -1) ctx.scale(-1, 1);
+ctx.scale(scale, scale);
+
+ctx.fillStyle = f.color;
+
+
+let color = f.color;
+
+// Apply brightness shift
+if (f.brightnessOffset) {
+    color = adjustBrightness(color, f.brightnessOffset);
+}
+
+let bodyColor = f.color;
+
+if (f.type === "pair" && typeof f.brightnessOffset === "number") {
+    bodyColor = adjustHexBrightness(bodyColor, f.brightnessOffset);
+}
+
+ctx.fillStyle = bodyColor;
+
+// then your existing shape code:
+switch (f.type) {
+    case "pair":
+        ctx.ellipse(0, 0, 20, 10, 0, 0, Math.PI * 2);
+        break;
+    // ...
+}
+// ----------------------------------------------------
+// BODY SHAPES (updated per your instructions)
+// ----------------------------------------------------
+ctx.beginPath();
+
+switch (f.type) {
+
+// NORMAL â€” same but sharper nose
+case "normal":
+ctx.moveTo(-25, 0);
+ctx.quadraticCurveTo(10, -31, 30, 0);   // sharper nose
+ctx.quadraticCurveTo(10, 25, -25, 0);
+break;
+
+// SHY â€” circle with a point at the back
+case "shy":
+ctx.moveTo(20, 0);
+ctx.arc(0, 0, 20, -10, Math.PI * 2);      // circle body
+ctx.lineTo(-30, 0);                     // point toward tail
+break;
+
+// BOLD â€” sharp front + sharp top, round bottom
+case "bold":
+ctx.moveTo(-25, 0);
+ctx.lineTo(-5, -20);
+ctx.lineTo(25, -25)
+ctx.quadraticCurveTo(20, 0, 25, 0)                    // sharp top
+ctx.quadraticCurveTo(15, 18, -25, 0);   // round bottom
+break;
+
+// LAZY â€” long, flat, rounded
+case "lazy":
+ctx.ellipse(-5, -2, 50, 8, 0, 1, Math.PI * 2);
+break;
+
+// HYPER â€” dart-like but round nose
+case "hyper":
+ctx.moveTo(-15, 0);
+ctx.quadraticCurveTo(15, -10, 20, 3);   // round nose
+ctx.quadraticCurveTo(10, 10, -15, 0);
+break;
+
+// PAIR â€” perfect as-is
+case "pair":
+ctx.ellipse(0, 0, 20, 10, 0, 0, Math.PI * 2);
+break;
+
+// BIG â€” perfect as-is
+case "big":
+ctx.ellipse(0, 0, 40, 22, 0, 0, Math.PI * 2);
+break;
+
+default:
+ctx.ellipse(0, 0, 30, 15, 0, 0, Math.PI * 2);
+break;
+}
+
+ctx.fill();
+
+// ----------------------------------------------------
+// TAIL SHAPES (updated where needed)
+// ----------------------------------------------------
+ctx.beginPath();
+
+switch (f.type) {
+
+// NORMAL â€” unchanged
+case "normal":
+ctx.moveTo(-20, 0);
+ctx.lineTo(-43, -17);
+ctx.lineTo(-40, 15);
+ctx.closePath();
+break;
+
+// SHY â€” ordinary triangle tail
+case "shy":
+ctx.moveTo(-20, 0);
+ctx.lineTo(-35, -25);
+ctx.quadraticCurveTo(-33,0,-35,25)
+ctx.lineTo(-35,25);
+ctx.closePath();
+break;
+
+// BOLD â€” ordinary tail (per your request)
+case "bold":
+ctx.moveTo(-25, 0);
+ctx.quadraticCurveTo(-30, -33,-47, -16);
+ctx.lineTo(-48, 15);
+ctx.closePath();
+break;
+
+// LAZY â€” ovular tail
+case "lazy":
+ctx.moveTo(-65, -2);
+ctx.lineTo(-60, -12);
+ctx.ellipse(-60, -2, 10, 20, 0, -Math.PI / 2, Math.PI / 2);
+ctx.lineTo(-60, 8);
+ctx.closePath();
+break;
+
+// HYPER â€” tiny triangle tail
+case "hyper":
+ctx.moveTo(-25, 0);
+ctx.lineTo(-40, -8);
+ctx.lineTo(-40, 8);
+ctx.closePath();
+break;
+
+// PAIR â€” forked tail (unchanged)
+case "pair":
+ctx.moveTo(-25, 0);
+ctx.lineTo(-40, -10);
+ctx.lineTo(-35, 0);
+ctx.lineTo(-40, 10);
+ctx.closePath();
+break;
+
+// BIG â€” broad heavy tail (unchanged)
+case "big":
+ctx.moveTo(-45, 0);
+ctx.lineTo(-70, -20);
+ctx.lineTo(-70, 20);
+ctx.closePath();
+break;
+
+default:
+ctx.moveTo(-40, 0);
+ctx.lineTo(-60, -15);
+ctx.lineTo(-60, 15);
+ctx.closePath();
+break;
+}
+
+ctx.fill();
+
+// ----------------------------------------------------
+// EYE (same for all)
+// ----------------------------------------------------
+ctx.fillStyle = "white";
+ctx.beginPath();
+ctx.arc(10, -5, 5, 0, Math.PI * 2);
+ctx.fill();
+
+ctx.fillStyle = "black";
+ctx.beginPath();
+ctx.arc(12, -5, 2, 0, Math.PI * 2);
+ctx.fill();
+
+ctx.restore();
+}
+
+// ----------------------------------------------------
+// UPDATE FISH (PERSONALITY + MOVEMENT)
+// ----------------------------------------------------
+function updateFish(f) {
+
+    // ----------------------------------------------------
+// SHY FISH â€” simple timid rhythm + speed-up when close
+// ----------------------------------------------------
+if (f.type === "shy") {
+
+    // 1. Basic timid rhythm (slow â†’ pause â†’ fast â†’ repeat)
+    if (Math.random() < 0.01) {
+
+        const r = Math.random();
+
+        if (r < 0.5) {
+            // Slow glide
+            f.vx = f.direction * (f.speed * 0.3);
+        }
+        else if (r < 0.8) {
+            // Pause
+            f.vx = 0;
+        }
+        else {
+            // Quick burst
+            f.vx = f.direction * (f.speed * 2.0);
+        }
+    }
+
+    // 2. Speed up when VERY close to another fish
+    const veryClose = fishList.some(o =>
+        o !== f &&
+        Math.hypot(o.x - f.x, o.y - f.y) < 60
+    );
+
+    if (veryClose) {
+        f.vx = f.direction * (f.speed * 2.5); // quick dart
+    }
+}
+
+    // ---------------------------------------------
+    // HYPER FISH ERRATIC MOVEMENT
+    // ---------------------------------------------
+    if (f.erratic) {
+        f.ax += (Math.random() - 0.5) * 1.2;
+        f.ay += (Math.random() - 0.5) * 1.2;
+    }
+
+    // ---------------------------------------------
+    // PAIR FISH SCHOOLING
+    // ---------------------------------------------
+    if (f.group) {
+        const neighbors = fishList.filter(o =>
+            o !== f &&
+            o.type === "pair" &&
+            Math.hypot(o.x - f.x, o.y - f.y) < 260
+        );
+
+        if (neighbors.length > 0 && neighbors.length < 20) {
+
+            let avgX = 0, avgY = 0, avgDir = 0;
+
+            neighbors.forEach(n => {
+                avgX += n.x;
+                avgY += n.y;
+                avgDir += n.direction;
+            });
+
+            avgX /= neighbors.length;
+            avgY /= neighbors.length;
+            avgDir /= neighbors.length;
+
+            f.ax += (avgX - f.x) * 0.0022;
+            f.ay += (avgY - f.y) * 0.0006;
+
+            f.direction = avgDir > 0 ? 1 : -1;
+
+            neighbors.forEach(n => {
+                const dx = f.x - n.x;
+                const dy = f.y - n.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist < 45) {
+                    f.ax += (dx / dist) * 0.04;
+                    f.ay += (dy / dist) * 0.02;
+                }
+            });
+
+            f.ay *= 0.85;
+            f.ax += (Math.random() - 0.5) * 0.002;
+        }
+    }
+
+    // ---------------------------------------------
+    // PERSONALITY WIGGLE MODIFIERS
+    // ---------------------------------------------
+    if (f.big) f.wiggleStrength *= 0.95;
+    if (f.type === "lazy") f.wiggleStrength *= 1.02;
+
+    // ---------------------------------------------
+    // PHYSICS â€” vertical movement disabled during avoidance
+    // ---------------------------------------------
+    f.vx += f.ax;
+    f.vy += f.ay;
+
+    f.x += f.vx;
+
+    if (!(f.type === "shy" && f.shyAvoiding)) {
+        f.y += f.vy;
+    }
+
+    f.vx *= 0.9;
+    f.vy *= 0.9;
+    f.ax *= 0.8;
+    f.ay *= 0.8;
+
+    // ---------------------------------------------
+    // HORIZONTAL STEP â€” respect shy freeze
+    // ---------------------------------------------
+    if (f.type === "shy" && f.shyFreezeFrames > 0) {
+        f.shyFreezeFrames--;
+    } else {
+        f.x += f.speed * f.direction;
+    }
+
+    if (f.x > canvas.width - f.turnBuffer) f.direction = -1;
+    if (f.x < f.turnBuffer) f.direction = 1;
+
+    f.wiggleStrength += (20 - f.wiggleStrength) * 0.05;
+
+    // ---------------------------------------------
+    // FINAL Y POSITION
+    // ---------------------------------------------
+    f.y = f.baseY + Math.sin(f.x * 0.01) * f.wiggleStrength;
+}
+
+// ----------------------------------------------------
+// CLICK PUSH
+// ----------------------------------------------------
+function pushFish(f, clickX, clickY) {
+const dx = f.x - clickX;
+const dy = f.y - clickY;
+const dist = Math.sqrt(dx * dx + dy * dy);
+
+if (dist < 120) {
+const force = (120 - dist) / 120;
+
+if ((clickX > f.x && f.direction === 1) ||
+(clickX < f.x && f.direction === -1)) {
+f.direction *= -1;
+}
+
+f.ax += (dx / dist) * force * 5;
+f.ay += (dy / dist) * force * 5;
+
+f.wiggleStrength = 40;
+}
+}
+
+canvas.addEventListener("click", event => {
+const rect = canvas.getBoundingClientRect();
+const clickX = event.clientX - rect.left;
+const clickY = event.clientY - rect.top;
+
+fishList.forEach(f => pushFish(f, clickX, clickY));
+});
+
+animate();
+  </script>
+
+</body>
+</html>

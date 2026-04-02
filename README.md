@@ -1,40 +1,87 @@
-# Fish tank
-This is a simple fish tank game, that has a bunch of fish to interact with in a simple fish tank. Each fish has it's own 
-personality and actions.
+# Idle Fish Tank
 
-## Personalities
-### Normal
-Normal fish are Purple, yellow, or light blue. They simply swim back and forth in the upper-middle section of the tank.
-### Bold
-Bold fish are red with a sweet haircut and a nice tail.
-### Shy
-Shy fish are round with a tall, pointed tail, and are an orange color. They move slowly, and are easily startled by other fish.
-### Groupers
-Group fish, or Pair fish, are very small, and either pink or cyan, and swim in groups. They often get confused on which group 
-they're meant to be in.
-### Lazy
-Lazy fish are long, slow, and boring. They swim around in the middle of the tank, not doing much, and are dark blue.
-### Big
-The big fish is big and green, and just swims around slowly minding his own business.
-### Hyper
-Hyper fish move quickly and randomly all over the tank, completely unpredictable and random, and are yellow
+An interactive fish tank simulation with different fish personalities.
 
-## Tank design
-The tank is about the size and shape of a computer screen, with sand, rocks, and sea grass at the bottom. The sea grass gently 
-sways back and forth, and there is always a large centerpiece, either a large rock, a piece of wood, or a treasure chest.
+## Development Workflow
 
-## How to play
-Download the files, and open up the file ```index.html```, this will open the game in your browser. There are 4 buttons and a
-drop-down menu, which lets you select the type of fish you want to add. Clicking on the screen makes nearby fish turn around
-and scatter away.
+### For Developers: Work with Source Files
+1. **Edit source files** in the `src/` folder:
+   - `src/index.html` - HTML structure and content
+   - `src/styles.css` - Styling and layout
+   - `src/background.js` - Scenery rendering
+   - `src/idle-fish.js` - Fish logic and behaviors
+2. **Test locally**: Open `src/index.html` in your browser to test changes
+3. **Build portable version**: Run `build/build-portable.bat` or `build/build-portable.ps1`
+4. **Share**: Distribute the generated `dist/index-portable.html` file
 
-Pressing ```Add fish``` adds exactly one (1) of the fish you selected. ```Remove fish``` removes the most recently added fish.
-```Reset fish``` regenerates the entire tank with a random setup. ```Fullscreen``` enables a full screen mode, but the buttons
-are not visible in this mode, so it's only useful for having as a background idle image, like a DVD logo.
+### For Users: Run the Portable Version
+Simply double-click `dist/index-portable.html` in any web browser. This single file contains everything needed and works from any location on any device.
 
-# Plans and sudgestions
-For this game, I plan on adding far more interactions between the fish, such as some fish running away when others get close,
-or there being a predatory fish that eats the smaller fish. I also plan on adding more backgrounds, more fish types, and
-more fish animations.
+## Features
 
-If you have any requests or sudgestions, feel free to tell me! I'd love to here your sudgestions.
+- **7 Fish Types**: Normal, Shy, Bold, Lazy, Hyper, Pair, and Big fish
+- **Interactive Controls**: Add, remove, and reset fish
+- **Click Interaction**: Click the canvas to nudge nearby fish
+- **Fullscreen Mode**: Click the fullscreen button for immersive viewing
+- **Responsive Design**: Works on different screen sizes
+
+## Fish Personalities
+
+- **Normal**: Balanced movement and appearance (Purple, Yellow, Light Blue)
+- **Shy**: Stays low, pauses occasionally, darts when threatened (Orange)
+- **Bold**: Fast and aggressive movement (Red)
+- **Lazy**: Slow, wide movements (Dark Blue)
+- **Hyper**: Erratic, unpredictable behavior (Yellow)
+- **Pair**: School together in groups with matching colors (Pink/Cyan)
+- **Big**: Large, slow-moving fish (Green)
+
+## Tank Design
+
+The tank features:
+- Animated water with gradient background
+- Sand, rocks, and swaying sea grass at the bottom
+- Random centerpiece (large rock, driftwood, or treasure chest)
+- Layered scenery for depth
+
+## How to Play
+
+- **Add Fish**: Select a fish type from the dropdown and click "Add Fish"
+- **Remove Fish**: Click "Remove Fish" to remove the most recently added fish
+- **Reset Fish**: Regenerates the entire tank with a random setup
+- **Click Canvas**: Nudge nearby fish to scatter them
+- **Fullscreen**: Immersive viewing mode (buttons hidden)
+
+## Technical Details
+
+The portable version (`index-portable.html`) embeds all CSS and JavaScript inline, making it completely self-contained and runnable from any location without dependencies.
+
+## File Organization
+
+```
+fishTank/
+├── 📁 src/                 # Source files (edit these)
+│   ├── index.html          # HTML structure
+│   ├── styles.css          # Styling and layout
+│   ├── background.js       # Scenery rendering
+│   └── idle-fish.js        # Fish logic and behaviors
+│
+├── 📁 build/               # Build automation
+│   ├── build-portable.bat  # Windows batch build script
+│   └── build-portable.ps1  # PowerShell build script
+│
+├── 📁 dist/                # Distribution files
+│   └── index-portable.html # Portable version (auto-generated)
+│
+├── 📖 README.md            # This documentation
+└── 📁 .git/               # Git repository
+```
+
+## Plans and Suggestions
+
+Future enhancements may include:
+- More fish interactions and behaviors
+- Additional backgrounds and environments
+- More fish types and animations
+- Predatory fish that eat smaller ones
+
+If you have any requests or suggestions, feel free to share!
