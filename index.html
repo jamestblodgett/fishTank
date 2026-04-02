@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Idle Screen – Fish Tank</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <main class="container">
+    <h1>Idle Fish Tank</h1>
+
+    <canvas id="fishCanvas" width="1000" height="500" aria-label="Fish tank canvas"></canvas>
+
+    <section class="controls" aria-label="Fish controls">
+      <div class="control-row">
+        <label for="fishTypeSelect">Fish Type</label>
+        <select id="fishTypeSelect">
+          <option value="normal">Normal (Purple / Orange / Blue)</option>
+          <option value="shy">Shy (Lime)</option>
+          <option value="bold">Bold (Red)</option>
+          <option value="lazy">Lazy (Indigo)</option>
+          <option value="hyper">Hyper (Yellow)</option>
+          <option value="pair">Pair (Pink / Cyan)</option>
+          <option value="big">Big (Green)</option>
+        </select>
+      </div>
+
+      <div class="control-row">
+        <button id="addFishBtn">Add Fish</button>
+        <button id="removeFishBtn">Remove Fish</button>
+        <button id="resetFishBtn">Reset Fish</button>
+        <button id="fullscreenBtn">Fullscreen</button>
+      </div>
+    </section>
+
+    <p id="fishInfo">Click add/remove to control fish. Click canvas to nudge nearby fish.</p>
+  </main>
+
+  <script type="module" src="idle-fish.js"></script>
+
+</body>
+</html>
