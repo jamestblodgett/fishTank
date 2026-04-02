@@ -40,7 +40,7 @@ turnBufferRange: [30, 140],
 zones: ["high", "middle"]
 },
 shy: {
-colors: ["#1dd1a1"],
+colors: ["#ff7b00"],
 speedRange: [0.5, 1.2],
 wiggleRange: [5, 12],
 turnBufferRange: [10, 40],
@@ -56,14 +56,14 @@ turnBufferRange: [60, 160],
 zones: ["top", "high", "middle"]
 },
 lazy: {
-colors: ["#341f97"],
+colors: ["#1e00a1"],
 speedRange: [0.4, 1],
 wiggleRange: [25, 40],
 turnBufferRange: [80, 200],
 zones: ["middle", "low"]
 },
 hyper: {
-colors: ["#feca57"],
+colors: ["#fffb00"],
 speedRange: [3, 6],
 wiggleRange: [5, 15],
 turnBufferRange: [5, 20],
